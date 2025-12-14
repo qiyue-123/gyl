@@ -1,19 +1,71 @@
-# 🎈 Blank app template
+# 医药电商需求预测原型（LLM 智能决策/问答）
 
-A simple Streamlit app template for you to modify!
+- 场景：医药电商在促销与服用周期影响下的需求预测与补货决策。
+- 目标：结合统计基线与生成式AI（ChatGPT API）提供可解释预测、问答与决策建议。
+- 前端：Streamlit；后端：Python；数据：示例CSV。
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://blank-app-template.streamlit.app/)
+## 痛点分析
+- 服用周期：药品有疗程，销量呈周期性但受复诊/停药影响波动。
+- 促销扰动：折扣/优惠券显著影响销量，传统模型难捕获非线性效应。
+- 冷启动与稀疏：新品或稀疏SKU历史数据不足，单纯时间序列效果差。
+- 运营决策：需要对“为何涨跌”“如何补货/定价”给出可解释结论。
+- 合规与隐私：医疗数据敏感，需最小化数据暴露与可审计。
 
-### How to run it on your own machine
+## 解决方案架构
+- 数据层：历史销量、常规价与折扣价、优惠券、节假日/事件（可扩展）。
+- 基线预测：移动平均/季节性分解，作为LLM的上下文基线与容错。
+- LLM 推断：
+  - 智能问答：自然语言查询（例：某SKU下周销量、促销影响、补货建议）。
+  - 解释生成：结合基线与特征，输出可审计的原因与风险。
+  - 决策助手：将需求预测转为补货建议（考虑安全库存与冷链/保质期）。
+- 前端：上传CSV，选择SKU、设定情景（折扣、优惠券、事件），一键生成预测与建议。
 
-1. Install the requirements
+## 运行步骤
+1) 安装依赖
+```bash
+pip install -r requirements.txt
+```
+2) 设置环境变量（OpenAI兼容接口）
+```bash
+set OPENAI_API_KEY=你的API密钥
+set OPENAI_BASE_URL=https://api.openai.com/v1
+```
+3) 启动应用
+```bash
+streamlit run app.py
+```
 
-   ```
-   $ pip install -r requirements.txt
-   ```
+## 网络代理支持
+- 若网络访问受限，可设置代理环境变量（Windows PowerShell 示例）：
+```bash
+setx HTTP_PROXY http://127.0.0.1:7890
+setx HTTPS_PROXY http://127.0.0.1:7890
+# 重新打开终端使其生效，或在当前会话：
+$env:HTTP_PROXY="http://127.0.0.1:7890"
+$env:HTTPS_PROXY="http://127.0.0.1:7890"
+```
+- 外部接口（节假日/天气/疫情）会自动使用代理；OpenAI SDK也支持标准代理环境变量。
 
-2. Run the app
+## 数据格式
+示例文件：`data/sample_sales.csv`
 
-   ```
-   $ streamlit run streamlit_app.py
-   ```
+必需列：
+- `sku_id`：SKU编码
+- `date`：日期，YYYY-MM-DD
+- `regular_price`：常规价
+- `discount_price`：折扣价（无折扣可与常规价相同）
+- `coupon`：0/1，是否有优惠券
+- `cycle_days`：服用周期（整数）
+- `sales`：销量
+
+## 参考文献与方法整合
+- 组合思路：ETS/SARIMA填补与周期拟合 + 促销/优惠券等特征输入到学习器（如XGBoost），并用LLM做解释与决策问答。
+- 本原型以“统计基线 + LLM解释与补货建议”为主，便于在课程作业中快速展示端到端效果。
+- 提示工程参考 `o2o2.html` 的促销拆分与周期性分析思想：
+  - 促销销量 = 常规销量 + 促销增量；
+  - 折扣力度 `discount = 1 - discount_price/regular_price`；
+  - 周期性通过 `cycle_days` 与移动平均/季节性基线体现。
+
+## 说明
+- 该原型通过LLM生成预测值与解释，适合冷启动与数据稀疏场景；可在后续作业中加入ARIMA/SARIMA与XGBoost的真实训练推理以增强精度。
+- 请注意API调用费用与隐私合规，敏感数据请做匿名化/聚合处理。
